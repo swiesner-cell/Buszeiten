@@ -15,14 +15,6 @@
 
     h1 {
       text-align: center;
-      margin-bottom: 10px;
-    }
-
-    .status {
-      text-align: center;
-      font-size: 14px;
-      color: #38bdf8;
-      margin-bottom: 15px;
     }
 
     .card {
@@ -30,11 +22,6 @@
       padding: 15px;
       border-radius: 16px;
       margin-bottom: 15px;
-    }
-
-    .title {
-      font-weight: bold;
-      margin-bottom: 10px;
     }
 
     .departure {
@@ -48,11 +35,6 @@
       font-weight: bold;
     }
 
-    .delay {
-      color: #f87171;
-      margin-left: 5px;
-    }
-
     button {
       width: 100%;
       padding: 14px;
@@ -60,65 +42,50 @@
       border: none;
       background: #38bdf8;
       margin-top: 10px;
-      font-size: 16px;
     }
   </style>
 </head>
 <body>
 
 <h1>🚌 Buszeiten</h1>
-<div class="status" id="status">Standort wird geladen...</div>
 
 <div class="card">
-  <div class="title">Linie 67 – An der Kirche (Dölzig)</div>
+  <b>Linie 67 – An der Kirche (Dölzig)</b>
   <div id="stop1">Lade...</div>
 </div>
 
 <div class="card">
-  <div class="title">Linie 131 – Holländische Mühle</div>
+  <b>Linie 131 – Holländische Mühle</b>
   <div id="stop2">Lade...</div>
 </div>
 
 <button onclick="loadAll()">🔄 Aktualisieren</button>
 
 <script>
-let userLocation = null;
-
-// Standort holen
-function getLocation() {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(pos => {
-      userLocation = pos.coords;
-      document.getElementById("status").innerText =
-        "📍 Standort erkannt";
-    }, () => {
-      document.getElementById("status").innerText =
-        "📍 Standort nicht erlaubt";
-    });
-  } else {
-    document.getElementById("status").innerText =
-      "Kein GPS verfügbar";
-  }
-}
+const proxy = "https://api.allorigins.win/raw?url=";
 
 function getMinutes(time) {
   return Math.round((new Date(time) - new Date()) / 60000);
 }
 
+async function fetchJSON(url) {
+  const res = await fetch(proxy + encodeURIComponent(url));
+  return await res.json();
+}
+
 async function getDepartures(stopName, line, containerId) {
   try {
-    const locRes = await fetch(
+    const locData = await fetchJSON(
       `https://transport.rest/locations?query=${stopName}&results=1`
     );
-    const locData = await locRes.json();
+
     if (!locData.length) return;
 
     const id = locData[0].id;
 
-    const depRes = await fetch(
+    const deps = await fetchJSON(
       `https://transport.rest/stops/${id}/departures?duration=120`
     );
-    const deps = await depRes.json();
 
     const filtered = deps.filter(d =>
       d.line.name == line &&
@@ -131,27 +98,15 @@ async function getDepartures(stopName, line, containerId) {
       const time = new Date(dep.when);
       const min = getMinutes(dep.when);
 
-      let warn = min <= 3 ? "soon" : "";
-
-      let delay = "";
-      if (dep.delay && dep.delay > 0) {
-        delay = `<span class="delay">+${Math.round(dep.delay/60)} min</span>`;
-      }
-
       html += `
-        <div class="departure ${warn}">
-          <div>
-            ${time.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
-            ${delay}
-          </div>
-          <div>
-            ${min <= 0 ? "jetzt" : "in " + min + " min"}
-          </div>
+        <div class="departure ${min <= 3 ? "soon" : ""}">
+          <div>${time.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+          <div>${min <= 0 ? "jetzt" : "in " + min + " min"}</div>
         </div>
       `;
     });
 
-    document.getElementById(containerId).innerHTML = html;
+    document.getElementById(containerId).innerHTML = html || "Keine Daten";
 
   } catch (e) {
     document.getElementById(containerId).innerText = "Fehler";
@@ -163,11 +118,7 @@ function loadAll() {
   getDepartures("Holländische Mühle", "131", "stop2");
 }
 
-// Start
-getLocation();
 loadAll();
-
-// Auto Refresh
 setInterval(loadAll, 30000);
 </script>
 
