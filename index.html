@@ -108,7 +108,7 @@ function getMinutes(time) {
 async function getDepartures(stopName, line, containerId) {
   try {
     const locRes = await fetch(
-      `https://v6.db.transport.rest/locations?query=${stopName}&results=1`
+      `https://transport.rest/locations?query=${stopName}&results=1`
     );
     const locData = await locRes.json();
     if (!locData.length) return;
@@ -116,7 +116,7 @@ async function getDepartures(stopName, line, containerId) {
     const id = locData[0].id;
 
     const depRes = await fetch(
-      `https://v6.db.transport.rest/stops/${id}/departures?duration=120`
+      `https://transport.rest/stops/${id}/departures?duration=120`
     );
     const deps = await depRes.json();
 
